@@ -9,9 +9,11 @@ ALPHA easy configurable web server.
 extern crate futures;
 extern crate hyper;
 extern crate pretty_env_logger;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate toml;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
 use futures::future::FutureResult;
 
@@ -31,7 +33,7 @@ struct Config {
 /// Server config struct
 #[derive(Debug, Deserialize)]
 struct ServerConfig {
-    ip: Option<String>,
+    host: Option<String>,
 }
 
 
@@ -52,20 +54,16 @@ impl Service for Tug {
                 Response::new()
                     .with_header(ContentLength(test.len() as u64))
                     .with_body(test)
-            },
+            }
             (&Post, "/") => {
                 let test: &'static [u8] = b"test post";
                 Response::new()
                     .with_header(ContentLength(test.len() as u64))
                     .with_body(test)
-            },
-            _ => {
-                Response::new()
-                    .with_status(StatusCode::NotFound)
             }
+            _ => Response::new().with_status(StatusCode::NotFound),
         })
     }
-
 }
 
 
@@ -73,16 +71,17 @@ fn main() {
     pretty_env_logger::init().unwrap();
     let toml_str = r#"
         [[server]]
-        ip = "127.0.0.1:7357"
+        host = "127.0.0.1:7357"
+
         [[server]]
-        ip = "127.0.0.1:1337"
+        host = "127.0.0.1:1337"
     "#;
 
     let config: Config = toml::from_str(toml_str).unwrap();
 
     for server_config in config.server.unwrap() {
-        let ip = server_config.ip.unwrap();
-        let addr = ip.parse().unwrap();
+        let host = server_config.host.unwrap();
+        let addr = host.parse().unwrap();
 
         thread::spawn(move || {
             let server = Http::new().bind(&addr, || Ok(Tug)).unwrap();
