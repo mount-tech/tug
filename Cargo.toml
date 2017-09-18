@@ -1,0 +1,10 @@
+[package]
+name = "tug"
+version = "0.1.0"
+authors = ["shockham <samuel.hockham@gmail.com>"]
+
+[dependencies]
+hyper = "0.11"
+futures = "0.1"
+pretty_env_logger = "0.1"
+
