@@ -1,4 +1,11 @@
-#![deny(warnings)]
+/*!
+
+ALPHA easy configurable web server.
+
+*/
+
+#![deny(warnings, missing_docs)]
+
 extern crate futures;
 extern crate hyper;
 extern crate pretty_env_logger;

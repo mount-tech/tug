@@ -2,6 +2,12 @@
 name = "tug"
 version = "0.1.0"
 authors = ["shockham <samuel.hockham@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/mount-research/tug"
+homepage = "https://github.com/mount-research/tug"
+documentation = "https://docs.rs/tug"
+description = "ALPHA easy configurable web server"
 
 [dependencies]
 hyper = "0.11"
