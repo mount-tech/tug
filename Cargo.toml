@@ -17,4 +17,5 @@ toml = "0.4"
 serde = "1.0"
 serde_derive = "1.0"
 log = "0.3"
+libflate = "0.1"
 

@@ -14,17 +14,20 @@ extern crate log;
 extern crate toml;
 #[macro_use]
 extern crate serde_derive;
+extern crate libflate;
 
 use futures::future::FutureResult;
 
 use hyper::StatusCode;
-use hyper::header::ContentLength;
+use hyper::header::{ContentLength, ContentEncoding, Encoding};
 use hyper::server::{Http, Service, Request, Response};
+
+use libflate::gzip::Encoder;
 
 use std::thread;
 use std::path::Path;
 use std::fs::File;
-use std::io::prelude::*;
+use std::io::{self, Read};
 
 /// Main config
 #[derive(Debug, Deserialize)]
@@ -64,9 +67,20 @@ impl Service for Tug {
             let mut buf = Vec::new();
             let _ = file.read_to_end(&mut buf);
 
+            // gzip encoding
+            let mut encoder = Encoder::new(Vec::new()).unwrap();
+            io::copy(&mut &buf[..], &mut encoder).unwrap();
+            let encoded_data = encoder.finish().into_result().unwrap();
+
             Response::new()
-                .with_header(ContentLength(buf.len() as u64))
-                .with_body(buf)
+                .with_header(ContentLength(encoded_data.len() as u64))
+                .with_header(
+                        ContentEncoding(vec![
+                        Encoding::Gzip,
+                        Encoding::Chunked,
+                    ])
+                )
+                .with_body(encoded_data)
         } else {
             Response::new().with_status(StatusCode::NotFound)
         })
