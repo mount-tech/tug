@@ -29,6 +29,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::{self, Read};
 use std::time::SystemTime;
+use std::env::args;
 
 /// Main config
 #[derive(Debug, Deserialize)]
@@ -92,16 +93,12 @@ impl Service for Tug {
 
 fn main() {
     pretty_env_logger::init().unwrap();
-    let toml_str = r#"
-        [[server]]
-        host = "127.0.0.1:7357"
+    let file_path = args().nth(1).unwrap_or("tug.toml".to_string());
+    let mut config_file = File::open(file_path).unwrap();
+    let mut toml_str = String::new();
+    let _ = config_file.read_to_string(&mut toml_str);
 
-        [[server]]
-        host = "127.0.0.1:1337"
-        root = "./src"
-    "#;
-
-    let config: Config = toml::from_str(toml_str).unwrap();
+    let config: Config = toml::from_str(toml_str.as_str()).unwrap();
 
     for server_config in config.server.unwrap() {
         let host = server_config.host.unwrap();
