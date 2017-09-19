@@ -19,7 +19,7 @@ extern crate libflate;
 use futures::future::FutureResult;
 
 use hyper::StatusCode;
-use hyper::header::{ContentLength, ContentEncoding, Encoding};
+use hyper::header::{ContentLength, ContentEncoding, Encoding, Date};
 use hyper::server::{Http, Service, Request, Response};
 
 use libflate::gzip::Encoder;
@@ -28,6 +28,7 @@ use std::thread;
 use std::path::Path;
 use std::fs::File;
 use std::io::{self, Read};
+use std::time::SystemTime;
 
 /// Main config
 #[derive(Debug, Deserialize)]
@@ -80,6 +81,7 @@ impl Service for Tug {
                         Encoding::Chunked,
                     ])
                 )
+                .with_header(Date(SystemTime::now().into()))
                 .with_body(encoded_data)
         } else {
             Response::new().with_status(StatusCode::NotFound)
