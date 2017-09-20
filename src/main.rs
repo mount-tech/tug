@@ -43,12 +43,14 @@ struct Config {
 struct ServerConfig {
     host: Option<String>,
     root: Option<String>,
+    gzip: Option<bool>,
 }
 
 
 /// Empty struct for the Tug service
 struct Tug {
     root: String,
+    gzip: bool,
 }
 
 
@@ -70,20 +72,17 @@ impl Service for Tug {
             let _ = file.read_to_end(&mut buf);
 
             // gzip encoding
-            let mut encoder = Encoder::new(Vec::new()).unwrap();
-            io::copy(&mut &buf[..], &mut encoder).unwrap();
-            let encoded_data = encoder.finish().into_result().unwrap();
+            if self.gzip {
+                let mut encoder = Encoder::new(Vec::new()).unwrap();
+                io::copy(&mut &buf[..], &mut encoder).unwrap();
+                buf = encoder.finish().into_result().unwrap();
+            }
 
             Response::new()
-                .with_header(ContentLength(encoded_data.len() as u64))
-                .with_header(
-                        ContentEncoding(vec![
-                        Encoding::Gzip,
-                        Encoding::Chunked,
-                    ])
-                )
+                .with_header(ContentLength(buf.len() as u64))
+                .with_header(ContentEncoding(vec![Encoding::Gzip, Encoding::Chunked]))
                 .with_header(Date(SystemTime::now().into()))
-                .with_body(encoded_data)
+                .with_body(buf)
         } else {
             Response::new().with_status(StatusCode::NotFound)
         })
@@ -104,11 +103,15 @@ fn main() {
         let host = server_config.host.unwrap();
         let addr = host.parse().unwrap();
         let root = server_config.root.unwrap_or(".".to_string());
+        let gzip = server_config.gzip.unwrap_or(true);
 
         thread::spawn(move || {
             let server = Http::new()
                 .bind(&addr, move || {
-                    let tug = Tug { root: root.clone() };
+                    let tug = Tug {
+                        root: root.clone(),
+                        gzip: gzip,
+                    };
                     Ok(tug)
                 })
                 .unwrap();

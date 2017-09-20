@@ -1,5 +1,6 @@
 [[server]]
 host = "127.0.0.1:7357"
+gzip = false
 
 [[server]]
 host = "127.0.0.1:1337"
