@@ -19,7 +19,7 @@ extern crate libflate;
 use futures::future::FutureResult;
 
 use hyper::StatusCode;
-use hyper::header::{ContentLength, ContentEncoding, Encoding, Date};
+use hyper::header::{Headers, ContentLength, ContentEncoding, Encoding, Date};
 use hyper::server::{Http, Service, Request, Response};
 
 use libflate::gzip::Encoder;
@@ -71,17 +71,21 @@ impl Service for Tug {
             let mut buf = Vec::new();
             let _ = file.read_to_end(&mut buf);
 
+            let mut headers = Headers::new();
+            headers.set(Date(SystemTime::now().into()));
+
             // gzip encoding
             if self.gzip {
                 let mut encoder = Encoder::new(Vec::new()).unwrap();
                 io::copy(&mut &buf[..], &mut encoder).unwrap();
                 buf = encoder.finish().into_result().unwrap();
+                headers.set(ContentEncoding(vec![Encoding::Gzip, Encoding::Chunked]));
             }
 
+            headers.set(ContentLength(buf.len() as u64));
+
             Response::new()
-                .with_header(ContentLength(buf.len() as u64))
-                .with_header(ContentEncoding(vec![Encoding::Gzip, Encoding::Chunked]))
-                .with_header(Date(SystemTime::now().into()))
+                .with_headers(headers)
                 .with_body(buf)
         } else {
             Response::new().with_status(StatusCode::NotFound)
