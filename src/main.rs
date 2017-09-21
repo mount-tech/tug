@@ -84,9 +84,7 @@ impl Service for Tug {
 
             headers.set(ContentLength(buf.len() as u64));
 
-            Response::new()
-                .with_headers(headers)
-                .with_body(buf)
+            Response::new().with_headers(headers).with_body(buf)
         } else {
             Response::new().with_status(StatusCode::NotFound)
         })
@@ -96,13 +94,21 @@ impl Service for Tug {
 
 fn main() {
     pretty_env_logger::init().unwrap();
+
+    // Config file handling
     let file_path = args().nth(1).unwrap_or("tug.toml".to_string());
-    let mut config_file = File::open(file_path).unwrap();
+    let mut config_file = match File::open(file_path) {
+        Ok(f) => f,
+        Err(e) => {
+            error!("Config: {}", e);
+            return;
+        }
+    };
     let mut toml_str = String::new();
     let _ = config_file.read_to_string(&mut toml_str);
-
     let config: Config = toml::from_str(toml_str.as_str()).unwrap();
 
+    // Spawn the servers
     for server_config in config.server.unwrap() {
         let host = server_config.host.unwrap();
         let addr = host.parse().unwrap();
