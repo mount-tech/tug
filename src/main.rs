@@ -31,6 +31,10 @@ use std::io::{self, Read};
 use std::time::SystemTime;
 use std::env::args;
 
+
+const DEFAULT_CONFIG: &'static str = "tug.toml";
+
+
 /// Main config
 #[derive(Debug, Deserialize)]
 struct Config {
@@ -92,21 +96,40 @@ impl Service for Tug {
 }
 
 
+/// Config file handling
+fn handle_config() -> Option<Config> {
+    let (file_path, default) = match args().nth(1) {
+        Some(fp) => (fp, false),
+        None => (DEFAULT_CONFIG.to_string(), true),
+    };
+
+    let toml_str = match File::open(file_path) {
+        Ok(mut f) => {
+            let mut toml_str = String::new();
+            let _ = f.read_to_string(&mut toml_str);
+            toml_str
+        }
+        Err(e) => {
+            if !default {
+                error!("Config: {}", e);
+                return None;
+            }
+            info!("Using default");
+            "[[server]]\nhost = \"127.0.0.1:8080\"".to_string()
+        }
+    };
+
+    Some(toml::from_str(toml_str.as_str()).unwrap())
+}
+
+
 fn main() {
     pretty_env_logger::init().unwrap();
 
-    // Config file handling
-    let file_path = args().nth(1).unwrap_or("tug.toml".to_string());
-    let mut config_file = match File::open(file_path) {
-        Ok(f) => f,
-        Err(e) => {
-            error!("Config: {}", e);
-            return;
-        }
+    let config = match handle_config() {
+        Some(c) => c,
+        None => return,
     };
-    let mut toml_str = String::new();
-    let _ = config_file.read_to_string(&mut toml_str);
-    let config: Config = toml::from_str(toml_str.as_str()).unwrap();
 
     // Spawn the servers
     for server_config in config.server.unwrap() {
