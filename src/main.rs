@@ -8,13 +8,14 @@ ALPHA easy configurable web server.
 
 extern crate futures;
 extern crate hyper;
-extern crate pretty_env_logger;
 #[macro_use]
 extern crate log;
 extern crate toml;
 #[macro_use]
 extern crate serde_derive;
 extern crate libflate;
+extern crate fern;
+extern crate chrono;
 
 use futures::future::FutureResult;
 
@@ -122,9 +123,30 @@ fn handle_config() -> Option<Config> {
     Some(toml::from_str(toml_str.as_str()).unwrap())
 }
 
+/// Setup logging to a file
+fn setup_logging() -> Result<(), fern::InitError> {
+    fern::Dispatch::new()
+        .format(|out, message, record| {
+            out.finish(format_args!(
+                "{}[{}][{}] {}",
+                chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                record.target(),
+                record.level(),
+                message
+            ))
+        })
+        .level(log::LogLevelFilter::Info)
+        .chain(std::io::stdout())
+        .chain(fern::log_file("output.log")?)
+        // Apply globally
+        .apply()?;
+
+    Ok(())
+}
+
 
 fn main() {
-    pretty_env_logger::init().unwrap();
+    setup_logging().unwrap();
 
     let config = match handle_config() {
         Some(c) => c,
