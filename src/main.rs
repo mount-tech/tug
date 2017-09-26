@@ -39,6 +39,7 @@ const DEFAULT_CONFIG: &'static str = "tug.toml";
 /// Main config
 #[derive(Debug, Deserialize)]
 struct Config {
+    log: Option<String>,
     server: Option<Vec<ServerConfig>>,
 }
 
@@ -124,7 +125,7 @@ fn handle_config() -> Option<Config> {
 }
 
 /// Setup logging to a file
-fn setup_logging() -> Result<(), fern::InitError> {
+fn setup_logging(path: String) -> Result<(), fern::InitError> {
     fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -137,7 +138,7 @@ fn setup_logging() -> Result<(), fern::InitError> {
         })
         .level(log::LogLevelFilter::Info)
         .chain(std::io::stdout())
-        .chain(fern::log_file("output.log")?)
+        .chain(fern::log_file(path)?)
         // Apply globally
         .apply()?;
 
@@ -146,12 +147,13 @@ fn setup_logging() -> Result<(), fern::InitError> {
 
 
 fn main() {
-    setup_logging().unwrap();
 
     let config = match handle_config() {
         Some(c) => c,
         None => return,
     };
+
+    setup_logging(config.log.unwrap_or("output.log".to_string())).unwrap();
 
     // Spawn the servers
     for server_config in config.server.unwrap() {

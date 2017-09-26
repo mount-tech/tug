@@ -1,3 +1,5 @@
+log = "test.log"
+
 [[server]]
 host = "127.0.0.1:7357"
 gzip = false
