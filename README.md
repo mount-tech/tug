@@ -20,6 +20,8 @@ tug some_config.toml
 
 Example config:
 ```
+log = "test.log"
+
 [[server]]
 host = "127.0.0.1:7357"
 gzip = false
@@ -30,3 +32,4 @@ Current directives:
 - host - host name/ip to serve at, default = `"127.0.0.1:8080"`
 - root - root folder to serve, default - `"./"`
 - gzip - gzip responses, default - `true`
+- log - define a path for the (currently) global config, default - `output.log`
