@@ -145,18 +145,9 @@ fn setup_logging(path: String) -> Result<(), fern::InitError> {
     Ok(())
 }
 
-
-fn main() {
-
-    let config = match handle_config() {
-        Some(c) => c,
-        None => return,
-    };
-
-    setup_logging(config.log.unwrap_or("output.log".to_string())).unwrap();
-
-    // Spawn the servers
-    for server_config in config.server.unwrap() {
+/// Start the server blocks
+fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
+    for server_config in server_configs {
         let host = server_config.host.unwrap();
         let addr = host.parse().unwrap();
         let root = server_config.root.unwrap_or(".".to_string());
@@ -176,6 +167,21 @@ fn main() {
             server.run().unwrap();
         });
     }
+
+    Ok(())
+}
+
+
+fn main() {
+    let config = match handle_config() {
+        Some(c) => c,
+        None => return,
+    };
+
+    let log_path = config.log.unwrap_or("output.log".to_string());
+    setup_logging(log_path).unwrap();
+
+    start_servers(config.server.unwrap()).unwrap();
 
     thread::park();
 }
