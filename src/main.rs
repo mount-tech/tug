@@ -16,6 +16,7 @@ extern crate serde_derive;
 extern crate libflate;
 extern crate fern;
 extern crate chrono;
+extern crate pulldown_cmark;
 
 use futures::future::FutureResult;
 
@@ -25,12 +26,15 @@ use hyper::server::{Http, Service, Request, Response};
 
 use libflate::gzip::Encoder;
 
+use pulldown_cmark::{Parser, html};
+
 use std::thread;
 use std::path::Path;
 use std::fs::File;
 use std::io::{self, Read};
 use std::time::SystemTime;
 use std::env::args;
+use std::ffi::OsStr;
 
 
 const DEFAULT_CONFIG: &'static str = "tug.toml";
@@ -75,7 +79,20 @@ impl Service for Tug {
         futures::future::ok(if file_path.exists() {
             let mut file = File::open(file_path).unwrap();
             let mut buf = Vec::new();
-            let _ = file.read_to_end(&mut buf);
+
+            if file_path.extension() == Some(OsStr::new("md")) {
+                let mut string_buf = String::new();
+                let _ = file.read_to_string(&mut string_buf);
+
+                let parser = Parser::new(string_buf.as_str());
+
+                let mut html_buf = String::new();
+                html::push_html(&mut html_buf, parser);
+
+                buf = html_buf.into_bytes();
+            } else {
+                let _ = file.read_to_end(&mut buf);
+            }
 
             let mut headers = Headers::new();
             headers.set(Date(SystemTime::now().into()));
