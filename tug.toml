@@ -3,6 +3,7 @@ log = "test.log"
 [[server]]
 host = "127.0.0.1:7357"
 gzip = false
+markdown = true
 
 [[server]]
 host = "127.0.0.1:1337"

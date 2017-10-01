@@ -54,6 +54,7 @@ struct ServerConfig {
     host: Option<String>,
     root: Option<String>,
     gzip: Option<bool>,
+    markdown: Option<bool>,
 }
 
 
@@ -61,6 +62,7 @@ struct ServerConfig {
 struct Tug {
     root: String,
     gzip: bool,
+    markdown: bool,
 }
 
 
@@ -80,7 +82,7 @@ impl Service for Tug {
             let mut file = File::open(file_path).unwrap();
             let mut buf = Vec::new();
 
-            if file_path.extension() == Some(OsStr::new("md")) {
+            if self.markdown &&  file_path.extension() == Some(OsStr::new("md")) {
                 let mut string_buf = String::new();
                 let _ = file.read_to_string(&mut string_buf);
 
@@ -169,6 +171,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
         let addr = host.parse().unwrap();
         let root = server_config.root.unwrap_or(".".to_string());
         let gzip = server_config.gzip.unwrap_or(true);
+        let markdown = server_config.markdown.unwrap_or(false);
 
         thread::spawn(move || {
             let server = Http::new()
@@ -176,6 +179,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
                     let tug = Tug {
                         root: root.clone(),
                         gzip: gzip,
+                        markdown: markdown,
                     };
                     Ok(tug)
                 })
