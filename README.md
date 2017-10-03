@@ -26,6 +26,7 @@ log = "test.log"
 host = "127.0.0.1:7357"
 gzip = false
 root = "./src"
+markdown = true
 ```
 
 Current directives:
@@ -33,3 +34,4 @@ Current directives:
 - root - root folder to serve, default - `"./"`
 - gzip - gzip responses, default - `true`
 - log - define a path for the (currently) global config, default - `output.log`
+- markdown - defines whether to render any markdown files in root, default - `false`
