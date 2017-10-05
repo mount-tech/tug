@@ -82,7 +82,7 @@ impl Service for Tug {
             let mut file = File::open(file_path).unwrap();
             let mut buf = Vec::new();
 
-            if self.markdown &&  file_path.extension() == Some(OsStr::new("md")) {
+            if self.markdown && file_path.extension() == Some(OsStr::new("md")) {
                 let mut string_buf = String::new();
                 let _ = file.read_to_string(&mut string_buf);
 
