@@ -3,7 +3,7 @@ log = "test.log"
 [[server]]
 host = "127.0.0.1:7357"
 gzip = false
-markdown = true
+markdown = { js = "/js/test.js", css = "/css/test.css" }
 
 [[server]]
 host = "127.0.0.1:1337"

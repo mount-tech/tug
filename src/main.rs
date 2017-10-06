@@ -54,7 +54,15 @@ struct ServerConfig {
     host: Option<String>,
     root: Option<String>,
     gzip: Option<bool>,
-    markdown: Option<bool>,
+    markdown: Option<MarkdownConfig>,
+}
+
+
+/// Markdown config struct
+#[derive(Debug, Deserialize, Clone)]
+struct MarkdownConfig {
+    js: Option<String>,
+    css: Option<String>,
 }
 
 
@@ -62,7 +70,7 @@ struct ServerConfig {
 struct Tug {
     root: String,
     gzip: bool,
-    markdown: bool,
+    markdown: Option<MarkdownConfig>,
 }
 
 
@@ -82,14 +90,25 @@ impl Service for Tug {
             let mut file = File::open(file_path).unwrap();
             let mut buf = Vec::new();
 
-            if self.markdown && file_path.extension() == Some(OsStr::new("md")) {
+            if self.markdown.is_some() && file_path.extension() == Some(OsStr::new("md")) {
+                let markdown_conf = self.markdown.clone().unwrap();
                 let mut string_buf = String::new();
                 let _ = file.read_to_string(&mut string_buf);
 
                 let parser = Parser::new(string_buf.as_str());
 
                 let mut html_buf = String::new();
+                if markdown_conf.css.is_some() {
+                    html_buf.push_str(
+                        format!("<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
+                                markdown_conf.css.unwrap()).as_str());
+                }
                 html::push_html(&mut html_buf, parser);
+                if markdown_conf.js.is_some() {
+                    html_buf.push_str(
+                        format!("<script src=\"{}\"></script>",
+                                markdown_conf.js.unwrap()).as_str());
+                }
 
                 buf = html_buf.into_bytes();
             } else {
@@ -171,7 +190,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
         let addr = host.parse().unwrap();
         let root = server_config.root.unwrap_or(".".to_string());
         let gzip = server_config.gzip.unwrap_or(true);
-        let markdown = server_config.markdown.unwrap_or(false);
+        let markdown = server_config.markdown;
 
         thread::spawn(move || {
             let server = Http::new()
@@ -179,7 +198,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
                     let tug = Tug {
                         root: root.clone(),
                         gzip: gzip,
-                        markdown: markdown,
+                        markdown: markdown.clone(),
                     };
                     Ok(tug)
                 })
