@@ -34,4 +34,4 @@ Current directives:
 - root - root folder to serve, default - `"./"`
 - gzip - gzip responses, default - `true`
 - log - define a path for the (currently) global config, default - `output.log`
-- markdown - defines whether to render any markdown files in root, default - `false`
+- markdown - defines whether to render any markdown files in root, default - `None`

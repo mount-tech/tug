@@ -1,6 +1,6 @@
 /*!
 
-ALPHA easy configurable web server.
+  ALPHA easy configurable web server.
 
 */
 
@@ -17,6 +17,7 @@ extern crate libflate;
 extern crate fern;
 extern crate chrono;
 extern crate pulldown_cmark;
+extern crate clap;
 
 use futures::future::FutureResult;
 
@@ -27,6 +28,8 @@ use hyper::server::{Http, Service, Request, Response};
 use libflate::gzip::Encoder;
 
 use pulldown_cmark::{Parser, html};
+
+use clap::{Arg, App};
 
 use std::thread;
 use std::path::Path;
@@ -100,14 +103,18 @@ impl Service for Tug {
                 let mut html_buf = String::new();
                 if markdown_conf.css.is_some() {
                     html_buf.push_str(
-                        format!("<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
-                                markdown_conf.css.unwrap()).as_str());
+                        format!(
+                            "<link rel=\"stylesheet\" type=\"text/css\" href=\"{}\">",
+                            markdown_conf.css.unwrap()
+                        ).as_str(),
+                    );
                 }
                 html::push_html(&mut html_buf, parser);
                 if markdown_conf.js.is_some() {
                     html_buf.push_str(
-                        format!("<script src=\"{}\"></script>",
-                                markdown_conf.js.unwrap()).as_str());
+                        format!("<script src=\"{}\"></script>", markdown_conf.js.unwrap())
+                            .as_str(),
+                    );
                 }
 
                 buf = html_buf.into_bytes();
@@ -213,6 +220,19 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
 
 
 fn main() {
+    let matches = App::new("tug")
+        .version("0.1.0")
+        .author("S. Hockham <shockham@protonmail.com>")
+        .about("Easy to configure web server")
+        .arg(
+            Arg::with_name("CONFIG")
+                .help("Sets the config file to use")
+                .required(false)
+                .index(1),
+        )
+        .get_matches();
+
+
     let config = match handle_config() {
         Some(c) => c,
         None => return,
