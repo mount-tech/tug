@@ -1,6 +1,6 @@
 # tug
 
-ALPHA easy configurable web server.
+Minimalist easy to configure web server. Alpha State.
 
 
 Installation:
@@ -26,7 +26,7 @@ log = "test.log"
 host = "127.0.0.1:7357"
 gzip = false
 root = "./src"
-markdown = true
+markdown = { js = "/js/test.js", css = "/css/test.css" }
 ```
 
 Current directives:
