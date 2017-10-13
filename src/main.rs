@@ -18,6 +18,7 @@ extern crate fern;
 extern crate chrono;
 extern crate pulldown_cmark;
 extern crate clap;
+extern crate acme_client;
 
 use futures::future::FutureResult;
 
@@ -30,6 +31,8 @@ use libflate::gzip::Encoder;
 use pulldown_cmark::{Parser, html};
 
 use clap::{Arg, App};
+
+use acme_client::Directory;
 
 use std::thread;
 use std::path::Path;
@@ -190,6 +193,26 @@ fn setup_logging(path: String) -> Result<(), fern::InitError> {
     Ok(())
 }
 
+/// Setup SSL
+fn setup_ssl(host: String) -> Result<(), acme_client::error::Error> {
+    let directory = Directory::lets_encrypt()?;
+    let account = directory.account_registration().register()?;
+
+    // Create a identifier authorization for example.com
+    let authorization = account.authorization(host.as_str())?;
+
+    // Validate ownership of example.com with http challenge
+    let http_challenge = authorization.get_http_challenge().ok_or("HTTP challenge not found")?;
+    http_challenge.save_key_authorization("/var/www")?;
+    http_challenge.validate()?;
+
+    let cert = account.certificate_signer(&[host.as_str()]).sign_certificate()?;
+    cert.save_signed_certificate("certificate.pem")?;
+    cert.save_private_key("certificate.key")?;
+
+    Ok(())
+}
+
 /// Start the server blocks
 fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
     for server_config in server_configs {
@@ -198,6 +221,8 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
         let root = server_config.root.unwrap_or(".".to_string());
         let gzip = server_config.gzip.unwrap_or(true);
         let markdown = server_config.markdown;
+
+        let _ = setup_ssl(host);
 
         thread::spawn(move || {
             let server = Http::new()
@@ -220,7 +245,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
 
 
 fn main() {
-    let matches = App::new("tug")
+    let _ = App::new("tug")
         .version("0.1.0")
         .author("S. Hockham <shockham@protonmail.com>")
         .about("Easy to configure web server")
