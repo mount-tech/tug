@@ -194,7 +194,7 @@ fn setup_logging(path: String) -> Result<(), fern::InitError> {
 }
 
 /// Setup SSL
-fn setup_ssl(host: String) -> Result<(), acme_client::error::Error> {
+fn setup_ssl(host: String, root: String) -> Result<(), acme_client::error::Error> {
     let directory = Directory::lets_encrypt()?;
     let account = directory.account_registration().register()?;
 
@@ -203,7 +203,7 @@ fn setup_ssl(host: String) -> Result<(), acme_client::error::Error> {
 
     // Validate ownership of example.com with http challenge
     let http_challenge = authorization.get_http_challenge().ok_or("HTTP challenge not found")?;
-    http_challenge.save_key_authorization("/var/www")?;
+    http_challenge.save_key_authorization(root.as_str())?;
     http_challenge.validate()?;
 
     let cert = account.certificate_signer(&[host.as_str()]).sign_certificate()?;
@@ -222,7 +222,7 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
         let gzip = server_config.gzip.unwrap_or(true);
         let markdown = server_config.markdown;
 
-        let _ = setup_ssl(host);
+        let _ = setup_ssl(host, root.clone());
 
         thread::spawn(move || {
             let server = Http::new()
