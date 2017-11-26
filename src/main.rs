@@ -202,11 +202,15 @@ fn setup_ssl(host: String, root: String) -> Result<(), acme_client::error::Error
     let authorization = account.authorization(host.as_str())?;
 
     // Validate ownership of example.com with http challenge
-    let http_challenge = authorization.get_http_challenge().ok_or("HTTP challenge not found")?;
+    let http_challenge = authorization.get_http_challenge().ok_or(
+        "HTTP challenge not found",
+    )?;
     http_challenge.save_key_authorization(root.as_str())?;
     http_challenge.validate()?;
 
-    let cert = account.certificate_signer(&[host.as_str()]).sign_certificate()?;
+    let cert = account
+        .certificate_signer(&[host.as_str()])
+        .sign_certificate()?;
     cert.save_signed_certificate("certificate.pem")?;
     cert.save_private_key("certificate.key")?;
 
