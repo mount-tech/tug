@@ -184,7 +184,7 @@ fn setup_logging(path: String) -> Result<(), fern::InitError> {
                 message
             ))
         })
-        .level(log::LogLevelFilter::Info)
+        .level(log::LevelFilter::Info)
         .chain(std::io::stdout())
         .chain(fern::log_file(path)?)
         // Apply globally
