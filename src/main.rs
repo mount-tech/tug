@@ -13,38 +13,36 @@ extern crate log;
 extern crate toml;
 #[macro_use]
 extern crate serde_derive;
-extern crate libflate;
-extern crate fern;
-extern crate chrono;
-extern crate pulldown_cmark;
-extern crate clap;
 extern crate acme_client;
+extern crate chrono;
+extern crate clap;
+extern crate fern;
+extern crate libflate;
+extern crate pulldown_cmark;
 
 use futures::future::FutureResult;
 
+use hyper::header::{ContentEncoding, ContentLength, Date, Encoding, Headers};
+use hyper::server::{Http, Request, Response, Service};
 use hyper::StatusCode;
-use hyper::header::{Headers, ContentLength, ContentEncoding, Encoding, Date};
-use hyper::server::{Http, Service, Request, Response};
 
 use libflate::gzip::Encoder;
 
-use pulldown_cmark::{Parser, html};
+use pulldown_cmark::{html, Parser};
 
-use clap::{Arg, App};
+use clap::{App, Arg};
 
 use acme_client::Directory;
 
-use std::thread;
-use std::path::Path;
-use std::fs::File;
-use std::io::{self, Read};
-use std::time::SystemTime;
 use std::env::args;
 use std::ffi::OsStr;
-
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
+use std::thread;
+use std::time::SystemTime;
 
 const DEFAULT_CONFIG: &'static str = "tug.toml";
-
 
 /// Main config
 #[derive(Debug, Deserialize)]
@@ -52,7 +50,6 @@ struct Config {
     log: Option<String>,
     server: Option<Vec<ServerConfig>>,
 }
-
 
 /// Server config struct
 #[derive(Debug, Deserialize)]
@@ -63,7 +60,6 @@ struct ServerConfig {
     markdown: Option<MarkdownConfig>,
 }
 
-
 /// Markdown config struct
 #[derive(Debug, Deserialize, Clone)]
 struct MarkdownConfig {
@@ -71,14 +67,12 @@ struct MarkdownConfig {
     css: Option<String>,
 }
 
-
 /// Empty struct for the Tug service
 struct Tug {
     root: String,
     gzip: bool,
     markdown: Option<MarkdownConfig>,
 }
-
 
 /// Tug service implementation
 impl Service for Tug {
@@ -115,8 +109,7 @@ impl Service for Tug {
                 html::push_html(&mut html_buf, parser);
                 if markdown_conf.js.is_some() {
                     html_buf.push_str(
-                        format!("<script src=\"{}\"></script>", markdown_conf.js.unwrap())
-                            .as_str(),
+                        format!("<script src=\"{}\"></script>", markdown_conf.js.unwrap()).as_str(),
                     );
                 }
 
@@ -144,7 +137,6 @@ impl Service for Tug {
         })
     }
 }
-
 
 /// Config file handling
 fn handle_config() -> Option<Config> {
@@ -202,9 +194,9 @@ fn setup_ssl(host: String, root: String) -> Result<(), acme_client::error::Error
     let authorization = account.authorization(host.as_str())?;
 
     // Validate ownership of example.com with http challenge
-    let http_challenge = authorization.get_http_challenge().ok_or(
-        "HTTP challenge not found",
-    )?;
+    let http_challenge = authorization
+        .get_http_challenge()
+        .ok_or("HTTP challenge not found")?;
     http_challenge.save_key_authorization(root.as_str())?;
     http_challenge.validate()?;
 
@@ -247,7 +239,6 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
     Ok(())
 }
 
-
 fn main() {
     let _ = App::new("tug")
         .version("0.1.0")
@@ -260,7 +251,6 @@ fn main() {
                 .index(1),
         )
         .get_matches();
-
 
     let config = match handle_config() {
         Some(c) => c,
