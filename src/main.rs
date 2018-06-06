@@ -21,10 +21,11 @@ extern crate libflate;
 extern crate pulldown_cmark;
 
 use futures::future::FutureResult;
+use futures::{IntoFuture, Future};
 
-use hyper::header::{ContentEncoding, ContentLength, Date, Encoding, Headers};
-use hyper::server::{Http, Request, Response, Service};
-use hyper::StatusCode;
+use hyper::header::{CONTENT_ENCODING, CONTENT_LENGTH, TRANSFER_ENCODING, DATE};
+use hyper::service::Service;
+use hyper::{Request, Response, StatusCode, Server, Body};
 
 use libflate::gzip::Encoder;
 
@@ -76,17 +77,17 @@ struct Tug {
 
 /// Tug service implementation
 impl Service for Tug {
-    type Request = Request;
-    type Response = Response;
+    type ReqBody = Body;
+    type ResBody = Body;
     type Error = hyper::Error;
-    type Future = FutureResult<Response, hyper::Error>;
+    type Future = FutureResult<Response<Body>, Self::Error>;
 
-    fn call(&self, req: Request) -> Self::Future {
+    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
         let root_path = self.root.clone();
-        let path_string = format!("{}{}", root_path, req.path());
+        let path_string = format!("{}{}", root_path, req.uri());
         let file_path = Path::new(&path_string);
 
-        futures::future::ok(if file_path.exists() {
+        let response = if file_path.exists() {
             let mut file = File::open(file_path).unwrap();
             let mut buf = Vec::new();
 
@@ -118,23 +119,38 @@ impl Service for Tug {
                 let _ = file.read_to_end(&mut buf);
             }
 
-            let mut headers = Headers::new();
-            headers.set(Date(SystemTime::now().into()));
+            let mut response = Response::builder();
+
+            response.header(DATE, format!("{:?}", SystemTime::now()).as_str());
 
             // gzip encoding
             if self.gzip {
                 let mut encoder = Encoder::new(Vec::new()).unwrap();
                 io::copy(&mut &buf[..], &mut encoder).unwrap();
                 buf = encoder.finish().into_result().unwrap();
-                headers.set(ContentEncoding(vec![Encoding::Gzip, Encoding::Chunked]));
+                response.header(CONTENT_ENCODING, "gzip");
+                response.header(TRANSFER_ENCODING, "chunked");
             }
 
-            headers.set(ContentLength(buf.len() as u64));
+            response.header(CONTENT_LENGTH, format!("{}", buf.len()).as_str());
 
-            Response::new().with_headers(headers).with_body(buf)
+            Response::builder().body(buf.into()).unwrap()
         } else {
-            Response::new().with_status(StatusCode::NotFound)
-        })
+            const NOT_FOUND: &'static str = "Not Found";
+            Response::builder().status(StatusCode::NOT_FOUND).body(NOT_FOUND.into()).unwrap()
+        };
+
+        futures::future::ok(response)
+    }
+}
+
+impl IntoFuture for Tug {
+    type Future = futures::future::FutureResult<Self::Item, Self::Error>;
+    type Item = Self;
+    type Error = hyper::Error;
+
+    fn into_future(self) -> Self::Future {
+        futures::future::ok(self)
     }
 }
 
@@ -221,18 +237,17 @@ fn start_servers(server_configs: Vec<ServerConfig>) -> Result<(), ()> {
         let _ = setup_ssl(host, root.clone());
 
         thread::spawn(move || {
-            let server = Http::new()
-                .bind(&addr, move || {
-                    let tug = Tug {
+            let server = Server::bind(&addr)
+                .serve(move || {
+                    Tug {
                         root: root.clone(),
                         gzip: gzip,
                         markdown: markdown.clone(),
-                    };
-                    Ok(tug)
+                    }
                 })
-                .unwrap();
-            info!("Serving at http://{}", server.local_addr().unwrap());
-            server.run().unwrap();
+                .map_err(|e| eprintln!("server error: {}", e));
+            info!("Serving at http://{}", addr);
+            hyper::rt::run(server);
         });
     }
 

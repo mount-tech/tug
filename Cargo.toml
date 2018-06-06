@@ -10,7 +10,7 @@ documentation = "https://docs.rs/tug"
 description = "ALPHA easy configurable web server"
 
 [dependencies]
-hyper = "0.11"
+hyper = "0.12"
 futures = "0.1"
 toml = "0.4"
 serde = "1.0"
