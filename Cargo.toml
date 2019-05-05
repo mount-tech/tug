@@ -19,7 +19,7 @@ log = "0.4"
 libflate = "0.1"
 fern = "0.5"
 chrono = "0.4"
-pulldown-cmark = "0.4"
+pulldown-cmark = "0.5"
 clap = "2.26"
 acme-client = "0.5"
 
